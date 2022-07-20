@@ -1,0 +1,1 @@
+SELECT Cust_Name FROM customers WHERE salesman_Id IN (SELECT Salesman_Id FROM salesman WHERE Commission > 0.12 )
