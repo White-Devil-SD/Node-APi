@@ -2,13 +2,8 @@ const Connection = require('../../config/db.config');
 const { DATETIME } = require('mysql/lib/protocol/constants/types');
 const crypto = require("crypto");
 const algorithm = "aes-256-cbc";
-const initVector = crypto.randomBytes(16);
-const Securitykey = crypto.randomBytes(32);
-const decipher = crypto.createDecipheriv(algorithm, Securitykey, initVector);
-const cipher = crypto.createCipheriv(algorithm, Securitykey, initVector);
-
-
-
+const key = crypto.randomBytes(32);
+const iv = crypto.randomBytes(16);
 
 var Users =function(user){
     this.USER_ID = user.USER_ID;
@@ -18,6 +13,16 @@ var Users =function(user){
     this.CREATE_DATE_TIME = DATETIME;
 }
 
+Users.iv = iv;
+Users.key= key;
+
+function encrypt(text) {
+    let cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key), iv);
+    let encrypted = cipher.update(text);
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
+    return { iv: iv.toString('hex'), encryptedData: encrypted.toString('hex') };
+ }
+
 
 Users.createUser = (userReqData,results)=>{
     console.log(userReqData);
@@ -25,12 +30,11 @@ Users.createUser = (userReqData,results)=>{
     var USERNAME = userReqData.USERNAME;
     var CONTACT_NUMBER = userReqData.CONTACT_NUMBER;
     var PASSWORD = userReqData.PASSWORD;
-    let encryptedData = cipher.update(PASSWORD, "utf-8", "hex");
-    encryptedData += cipher.final("hex");
+    var d = encrypt(PASSWORD);
     var sql=
-    " INSERT INTO user_details VALUES (" + USER_ID + ",'" + USERNAME + "'," + CONTACT_NUMBER + ",'" + encryptedData + "', '" +  new Date() + "')";
+    " INSERT INTO user_details VALUES (" + USER_ID + ",'" + USERNAME + "'," + CONTACT_NUMBER + ",'" + d.encryptedData + "', '" +  new Date() + "')";
+
     Connection.query(sql, userReqData,(err,res)=> {
-        console.log(sql);
         if(err){
             console.log('insertion error');
             console.log(sql);
@@ -41,25 +45,6 @@ Users.createUser = (userReqData,results)=>{
         }
     })
 }
-
-
-// Users.getAllUsers= (result=>{
-//     Connection.query('SELECT * FROM user_details',(err,res)=> {
-//         if(err){
-//             result(null,err);
-//         }else{
-//             let encryptedData = cipher.update(PASSWORD, "utf-8", "hex");
-//             encryptedData += cipher.final("hex");
-//             let decryptedData = decipher.update(PASSWORD, "hex", "utf-8");
-//             decryptedData += decipher.final("utf8");
-//             console.log("Decrypted message: " + decryptedData);
-
-//             PASSWORD = decryptedData; 
-//             // result(null,res);
-//         }
-//     })
-// })
-
 
 Users.getUserByID = (id,result) =>{
     Connection.query('SELECT * FROM user_details WHERE USER_ID=?',id,(err,res)=>{

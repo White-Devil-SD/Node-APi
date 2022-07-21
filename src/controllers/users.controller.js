@@ -1,7 +1,19 @@
 const UsersModel = require('../models/users.model');
 const Users = require('../models/users.model')
 const Connection = require('../../config/db.config');
+const crypto = require("crypto");
+const algorithm = "aes-256-cbc";
+var key = Users.key;
+var iv = Users.iv;
 
+function decrypt(text) {
+    let iv = Buffer.from(text.iv, 'hex');
+    let encryptedText = Buffer.from(text.encryptedData, 'hex');
+    let decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key), iv);
+    let decrypted = decipher.update(encryptedText);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+    return decrypted.toString();
+ }
 
 exports.getUserList = (req,res) => {
 
@@ -11,8 +23,8 @@ exports.getUserList = (req,res) => {
         }else{
             console.log('Users details fetched Successfully!');
             for(var i=0; i< result.length; i++){
-            console.log(result[i].USERNAME + " "+ result[i].CONTACT_NUMBER +" " + result[i].PASSWORD + " " + result[i].CURRENT_DATE_TIME + " \n");
-            }
+            console.log(result[i].USERNAME + " "+ result[i].CONTACT_NUMBER +" " + decrypt({iv:iv.toString('hex'),encryptedData: result[i].PASSWORD.toString('hex')}) + " " + result[i].CURRENT_DATE_TIME + " \n");           
+        }
         }
         res.send(result);
     })
@@ -26,7 +38,6 @@ exports.createNewUser = (req,res)=> {
     }else{
         UsersModel.createUser(userReqData, (err, data)=> {
             if(err){
-                log
                 res.send(err);
                 res.json({status: true, statuscode: '201',message: 'Created', data2: data })
             }else{
@@ -47,20 +58,20 @@ exports.deleteuser = (req,res)=> {
     })
 }
 
-exports.getUser = (req,res) =>{
-    Connection.query('SELECT * FROM user_details WHERE USER_ID=?', (err,result)=> {
-        if(err){
-            console.log('Error while fetching Users', err);
-        }else{
-            console.log('Users details fetched Successfully!');
-            for(var i=0; i< result.length; i++){
-            console.log(result[i].USERNAME + " "+ result[i].CONTACT_NUMBER +" " + result[i].PASSWORD + " " + result[i].CURRENT_DATE_TIME + " \n");
-            }
-        }
-        res.send(result);
-        res.json({statuscode:'200'})
-    })
-}
+// exports.getUser = (req,res) =>{
+//     Connection.query('SELECT * FROM user_details WHERE USER_ID=?', (err,result)=> {
+//         if(err){
+//             console.log('Error while fetching Users', err);
+//         }else{
+//             console.log('Users details fetched Successfully!');
+//             for(var i=0; i< result.length; i++){
+//             console.log(result[i].USERNAME + " "+ result[i].CONTACT_NUMBER +" " + result[i].PASSWORD + " " + result[i].CURRENT_DATE_TIME + " \n");
+//             }
+//         }
+//         res.send(result);
+//         res.json({statuscode:'200'})
+//     })
+// }
 
 
 exports.getUserByID = (req,res)=> {
